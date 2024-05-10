@@ -135,6 +135,33 @@ commands:
           path: /tmp/artifacts
           destination: "<< parameters.component >>-artifacts"
 
+  push_helm:
+    description: "Push the Helm artifact to Docker OCI Registry"
+    parameters:
+      component:
+        description: "The name of the component to push"
+        type: string
+      repository:
+        description: "The name of the Docker OCI Registry"
+        type: string
+        default: "oci://registry-1.docker.io/varnish"
+    steps:
+      - run:
+          name: Prepare environment
+          command: |
+            apk upgrade --update-cache
+            apk add --virtual .helm-build helm
+      - run:
+          name: Setup environment
+          command: |
+            echo $DOCKER_PASSWORD | helm registry login -u "$DOCKER_USERNAME" --password-stdin registry-1.docker.io
+      - restore_cache:
+          key: "v1-<< parameters.component >>-{{ .Branch }}-{{ .Environment.CIRCLE_SHA1 }}"
+      - run:
+          name: Upload to Docker OCI Registry
+          command: |
+            helm push /tmp/artifacts/"<< parameters.component >>"-*.tgz "<< parameters.repository >>"
+
 jobs:
   test_varnish_cache:
     docker:
@@ -155,6 +182,13 @@ jobs:
           component: varnish-cache
           app_version_repo: docker://docker.io/varnish
 
+  push_varnish_cache:
+    docker:
+      - image: alpine:latest
+    steps:
+      - push_helm:
+          component: varnish-cache
+
 workflows:
   version: 2
   build-release:
@@ -167,5 +201,14 @@ workflows:
           requires:
             - test_varnish_cache
           filters:
+            tags:
+              only: /^v.*/
+      - push_varnish_cache:
+          requires:
+            - build_varnish_cache
+          filters:
+            branches:
+              only:
+                - main
             tags:
               only: /^v.*/
