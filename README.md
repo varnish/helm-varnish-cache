@@ -2,15 +2,11 @@
 
 This repository hosts a Helm chart for Varnish Cache.
 
-## Usage
+## Documentation
 
-``` shell
-$ helm install -f values.yaml release-name oci://registry-1.docker.io/varnish/varnish-cache
-```
+For documentation, please see README.md in each chart's directory.
 
-## Configuration
-
-See also [Configurations](docs/configurations.md).
+- [varnish-cache](varnish-cache/README.md)
 
 ## Enterprise Customers
 
