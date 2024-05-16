@@ -60,8 +60,7 @@ server:
   hostNetwork: false
 
   # Enables shared process namespace. May be required in case `extraContainers` needs to
-  # notify other process in the same Pod using UNIX signals (e.g. varnish-discovery
-  # and varnish-broadcaster).
+  # notify other process in the same Pod using UNIX signals.
   # https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/
   shareProcessNamespace: false
 
@@ -181,7 +180,7 @@ server:
   #      type: Directory
 
   # Sets the Varnish secret. If not set, Varnish will generate one on every Pod
-  # start. Note that Varnish Controller require this value to be set.
+  # start.
   secret: ""
 
   # Sets the Varnish secret from Kubernetes secret. Either server.secret
