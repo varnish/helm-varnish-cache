@@ -56,8 +56,8 @@ server:
   # https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/
   updateStrategy: {}
 
-  # Enables hostNetworking to expose Varnish directly on the node.
-  hostNetworking: false
+  # Enables hostNetwork to expose Varnish directly on the node.
+  hostNetwork: false
 
   # Enables shared process namespace. May be required in case `extraContainers` needs to
   # notify other process in the same Pod using UNIX signals (e.g. varnish-discovery
