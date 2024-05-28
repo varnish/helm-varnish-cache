@@ -208,7 +208,6 @@ workflows:
             - build_varnish_cache
           filters:
             branches:
-              only:
-                - main
+              ignore: /.*/
             tags:
               only: /^v.*/
