@@ -282,7 +282,7 @@ server:
     #      - type: Pods
     #        value: 4
     #        periodSeconds: 60
-    #      selectPolicy: Max
+    #    selectPolicy: Max
 
     # Configures the autoscaling metrics. Can be set as a templated string
     # or a YAML map.
