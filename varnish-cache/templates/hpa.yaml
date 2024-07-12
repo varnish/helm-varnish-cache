@@ -24,6 +24,8 @@ spec:
     name: {{ include "varnish-cache.fullname" . }}
   minReplicas: {{ .Values.server.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.server.autoscaling.maxReplicas }}
+  behavior:
+  {{- toYaml .Values.server.autoscaling.behavior.scaleDown | nindent 4 }}
 {{- if .Values.server.autoscaling.metrics }}
   metrics:
 {{- $tp := typeOf .Values.server.autoscaling.metrics }}
