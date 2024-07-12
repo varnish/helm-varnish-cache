@@ -402,6 +402,16 @@ Declares the Varnish Cache container
     preStop:
       exec:
         command: ["/bin/sleep", {{ .Values.server.delayedHaltSeconds | quote }}]
+  {{- else if or (gt (int .Values.server.replicas) 1) .Values.server.autoscaling.enabled }}
+  lifecycle:
+    preStop:
+      exec:
+        command:
+        - /bin/sh
+        - -c
+        - >
+          while [ `varnishstat -1 | awk '/MEMPOOL.sess[0-9]+.live/ {a+=$2} END {print a}'` -ne 0 ]; do sleep 1; done;
+          sleep 5
   {{- end }}
 {{- end }}
 
