@@ -41,3 +41,20 @@ Sets up the Varnish Enterprise image and its overrides (if any)
 image: "{{- if eq $image.repository "-" -}}{{ $base.repository }}{{ else }}{{ $image.repository }}{{ end }}:{{- if eq $image.tag "-" }}{{ default .Chart.AppVersion $base.tag }}{{ else }}{{ default $.Chart.AppVersion $image.tag }}{{ end }}"
 imagePullPolicy: {{ if eq $image.pullPolicy "-" }}{{ $base.pullPolicy }}{{ else }}{{ $image.pullPolicy }}{{ end }}
 {{- end }}
+
+{{/*
+Sets extra envs from either an array, an object, or a string.
+*/}}
+{{- define "varnish-cache.toEnv" }}
+{{- $tp := kindOf .envs }}
+{{- if eq $tp "string" }}
+{{- tpl .envs . | trim | nindent 0 }}
+{{- else if eq $tp "map" }}
+{{- range $k, $v := .envs }}
+- name: {{ $k | quote }}
+  value: {{ $v | quote }}
+{{- end }}
+{{- else if eq $tp "slice" }}
+{{- .envs | toYaml }}
+{{- end }}
+{{- end }}

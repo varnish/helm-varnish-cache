@@ -110,6 +110,9 @@ server:
   #    mode: "0700"
   #    proto: "PROXY"
 
+  # Sets the extra environment variables for Varnish Enterprise.
+  extraEnvs: {}
+
   # Sets the default Time To Live (TTL) for cached objects.
   ttl: 120
 

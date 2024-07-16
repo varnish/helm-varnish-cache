@@ -539,6 +539,126 @@ template=${template:-}
     [ "${actual}" == "null" ]
 }
 
+@test "${kind}/extraEnvs: can be configured" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.extraEnvs.FOO=bar' \
+        --set 'server.extraEnvs.BAZ=bax' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "FOO")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"FOO","value":"bar"}' ]
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "BAZ")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"BAZ","value":"bax"}' ]
+}
+
+@test "${kind}/extraEnvs: can be configured as a templated string" {
+    cd "$(chart_dir)"
+
+    local extraEnvs="
+- name: RELEASE_NAME
+  value: {{ .Release.Name }}
+- name: RELEASE_NAMESPACE
+  value: {{ .Release.Namespace }}"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.extraEnvs=${extraEnvs}" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "RELEASE_NAME")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"RELEASE_NAME","value":"release-name"}' ]
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "RELEASE_NAMESPACE")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"RELEASE_NAMESPACE","value":"default"}' ]
+}
+
+
+@test "${kind}/extraEnvs: can be configured as a list" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.extraEnvs[0].name=FOO' \
+        --set 'server.extraEnvs[0].value=bar' \
+        --set 'server.extraEnvs[1].name=BAZ' \
+        --set 'server.extraEnvs[1].value=bax' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "FOO")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"FOO","value":"bar"}' ]
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "BAZ")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"BAZ","value":"bax"}' ]
+}
+
+@test "${kind}/extraEnvs: can be configured as a list of non-value literal" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.extraEnvs[0].name=FROM_CONFIGMAP' \
+        --set 'server.extraEnvs[0].valueFrom.configMapKeyRef.name=my-configmap' \
+        --set 'server.extraEnvs[0].valueFrom.configMapKeyRef.key=my-key' \
+        --set 'server.extraEnvs[1].name=FROM_SECRET' \
+        --set 'server.extraEnvs[1].valueFrom.secretKeyRef.name=my-secret' \
+        --set 'server.extraEnvs[1].valueFrom.secretKeyRef.key=my-key' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "FROM_CONFIGMAP")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"FROM_CONFIGMAP","valueFrom":{"configMapKeyRef":{"key":"my-key","name":"my-configmap"}}}' ]
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "FROM_SECRET")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"FROM_SECRET","valueFrom":{"secretKeyRef":{"key":"my-key","name":"my-secret"}}}' ]
+}
+
 @test "${kind}/settings: configured by default" {
     cd "$(chart_dir)"
 

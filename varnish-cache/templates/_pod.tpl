@@ -357,6 +357,7 @@ Declares the Varnish Cache container
       valueFrom:
         fieldRef:
           fieldPath: status.podIP
+    {{- include "varnish-cache.toEnv" (merge (dict "envs" .Values.server.extraEnvs) .) | nindent 4 }}
   volumeMounts:
     - name: {{ .Release.Name }}-config
       mountPath: /etc/varnish
