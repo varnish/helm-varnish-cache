@@ -30,7 +30,7 @@ spec:
 {{- end }}
 {{- if .Values.server.autoscaling.metrics }}
   metrics:
-{{- $tp := typeOf .Values.server.autoscaling.metrics }}
+{{- $tp := kindOf .Values.server.autoscaling.metrics }}
 {{- if eq $tp "string" }}
   {{- tpl .Values.server.autoscaling.metrics . | trim | nindent 4 }}
 {{- else }}

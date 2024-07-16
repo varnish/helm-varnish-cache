@@ -44,7 +44,7 @@ spec:
       {{- include "varnish-cache.terminationGracePeriodSeconds" . | indent 6 }}
   {{- if not (empty .Values.server.extraVolumeClaimTemplates) }}
   volumeClaimTemplates:
-    {{- $tp := typeOf .Values.server.extraVolumeClaimTemplates }}
+    {{- $tp := kindOf .Values.server.extraVolumeClaimTemplates }}
     {{- if eq $tp "string" }}
       {{- tpl .Values.server.extraVolumeClaimTemplates . | trim | nindent 4 }}
     {{- else }}

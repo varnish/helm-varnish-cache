@@ -4,7 +4,7 @@ Sets up nodeSelector depending on whether a YAML map or a string is given.
 {{- define "varnish-cache.nodeSelector" -}}
 {{- if .Values.server.nodeSelector }}
 nodeSelector:
-  {{- $tp := typeOf .Values.server.nodeSelector }}
+  {{- $tp := kindOf .Values.server.nodeSelector }}
   {{- if eq $tp "string" }}
     {{- tpl .Values.server.nodeSelector . | trim | nindent 2 }}
   {{- else }}
@@ -20,7 +20,7 @@ Sets up Pod labels
 labels:
   {{- include "varnish-cache.selectorLabels" . | nindent 2 }}
   {{- if .Values.server.podLabels }}
-  {{- $tp := typeOf .Values.server.podLabels }}
+  {{- $tp := kindOf .Values.server.podLabels }}
   {{- if eq $tp "string" }}
     {{- tpl .Values.server.podLabels . | trim | nindent 2 }}
   {{- else }}
@@ -39,7 +39,7 @@ Sets up Pod annotations
 {{- $secretConfig := include "varnish-cache.secretConfig" . }}
 annotations:
   {{- if .Values.server.podAnnotations }}
-  {{- $tp := typeOf .Values.server.podAnnotations }}
+  {{- $tp := kindOf .Values.server.podAnnotations }}
   {{- if eq $tp "string" }}
     {{- tpl .Values.server.podAnnotations . | trim | nindent 2 }}
   {{- else }}
@@ -65,7 +65,7 @@ annotations:
   {{- if not (empty $extraManifests) }}
   {{- range $v := $extraManifests }}
   {{- if default false $v.checksum }}
-  {{- $tp := typeOf $v.data }}
+  {{- $tp := kindOf $v.data }}
   {{- if eq $tp "string" }}
   checksum/{{ $.Release.Name }}-extra-{{ $v.name }}: {{ tpl $v.data $ | sha256sum }}
   {{- else }}
@@ -82,7 +82,7 @@ Sets up Pod affinity depending on whether a YAML map or a string is given.
 {{- define "varnish-cache.affinity" -}}
 {{- if .Values.server.affinity }}
 affinity:
-  {{- $tp := typeOf .Values.server.affinity }}
+  {{- $tp := kindOf .Values.server.affinity }}
   {{- if eq $tp "string" }}
     {{- tpl .Values.server.affinity . | trim | nindent 2 }}
   {{- else }}
@@ -97,7 +97,7 @@ Sets up Pod tolerations depending on whether a YAML map or a string is given.
 {{- define "varnish-cache.tolerations" -}}
 {{- if .Values.server.tolerations }}
 tolerations:
-  {{- $tp := typeOf .Values.server.tolerations }}
+  {{- $tp := kindOf .Values.server.tolerations }}
   {{- if eq $tp "string" }}
     {{- tpl .Values.server.tolerations . | trim | nindent 2 }}
   {{- else }}
@@ -194,7 +194,7 @@ volumes:
   emptyDir:
     medium: "Memory"
 {{- if .Values.server.extraVolumes }}
-  {{- $tp := typeOf .Values.server.extraVolumes }}
+  {{- $tp := kindOf .Values.server.extraVolumes }}
   {{- if eq $tp "string" }}
     {{- tpl .Values.server.extraVolumes . | trim | nindent 0 }}
   {{- else }}
@@ -237,7 +237,7 @@ Declares the Varnish Cache container
 {{- define "varnish-cache.serverContainer" -}}
 {{- $cmdfileConfig := include "varnish-cache.cmdfileConfig" . }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
-{{- $tp := typeOf .Values.server.extraArgs }}
+{{- $tp := kindOf .Values.server.extraArgs }}
 {{- $varnishExtraArgs := list }}
 {{- if eq $tp "string" }}
 {{- $varnishExtraArgs = append $varnishExtraArgs .Values.server.extraArgs }}
@@ -391,7 +391,7 @@ Declares the Varnish Cache container
     - name: {{ .Release.Name }}-varnish-vsm
       mountPath: /var/lib/varnish
     {{- if .Values.server.extraVolumeMounts }}
-    {{- $tp := typeOf .Values.server.extraVolumeMounts }}
+    {{- $tp := kindOf .Values.server.extraVolumeMounts }}
     {{- if eq $tp "string" }}
     {{- tpl .Values.server.extraVolumeMounts . | trim | nindent 4 }}
     {{- else }}
@@ -467,7 +467,7 @@ Declares the Varnish deployment strategy
 */}}
 {{- define "varnish-cache.strategy" -}}
 {{- if .Values.server.strategy }}
-{{- $tp := typeOf .Values.server.strategy }}
+{{- $tp := kindOf .Values.server.strategy }}
 strategy:
 {{- if eq $tp "string" }}
   {{- tpl .Values.server.strategy . | trim | nindent 2 }}
@@ -482,7 +482,7 @@ Declares the Varnish DaemonSet and StatefulSet updateStrategy
 */}}
 {{- define "varnish-cache.updateStrategy" -}}
 {{- if .Values.server.updateStrategy }}
-{{- $tp := typeOf .Values.server.updateStrategy }}
+{{- $tp := kindOf .Values.server.updateStrategy }}
 updateStrategy:
 {{- if eq $tp "string" }}
   {{- tpl .Values.server.updateStrategy . | trim | nindent 2 }}
@@ -497,7 +497,7 @@ Declares the Varnish extra container
 */}}
 {{- define "varnish-cache.extraContainers" -}}
 {{- if .Values.server.extraContainers }}
-{{- $tp := typeOf .Values.server.extraContainers }}
+{{- $tp := kindOf .Values.server.extraContainers }}
 {{- if eq $tp "string" }}
   {{- tpl .Values.server.extraContainers . | trim | nindent 0 }}
 {{- else }}
@@ -512,7 +512,7 @@ Declares the Varnish init containers
 {{- define "varnish-cache.initContainers" -}}
 {{- if .Values.server.extraInitContainers }}
 initContainers:
-  {{- $tp := typeOf .Values.server.extraInitContainers }}
+  {{- $tp := kindOf .Values.server.extraInitContainers }}
   {{- if eq $tp "string" }}
     {{- tpl .Values.server.extraInitContainers . | trim | nindent 2 }}
   {{- else }}
