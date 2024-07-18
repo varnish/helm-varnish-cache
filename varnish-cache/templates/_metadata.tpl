@@ -35,29 +35,34 @@ Create the name of the service account to use
 Sets up the common server extra annotations
 */}}
 {{- define "varnish-cache.serverAnnotations" -}}
-{{- if .Values.server.annotations }}
-annotations:
-  {{- $tp := kindOf .Values.server.annotations }}
-  {{- if eq $tp "string" }}
-    {{- tpl .Values.server.annotations . | trim | nindent 2 }}
-  {{- else }}
-    {{- toYaml .Values.server.annotations | nindent 2 }}
-  {{- end }}
-{{- end }}
+{{- $section := default "server" .section }}
+{{- include "varnish-cache.toYamlField"
+  (merge
+    (dict
+      "section" $section
+      "fieldName" "annotations"
+      "extraFieldValues" .extraAnnotations)
+    .) }}
 {{- end }}
 
 {{/*
 Sets up the common server extra labels
 */}}
 {{- define "varnish-cache.serverLabels" -}}
-{{- if .Values.server.labels }}
-{{- $tp := kindOf .Values.server.labels }}
-{{- if eq $tp "string" }}
-  {{- tpl .Values.server.labels . | trim | nindent 0 }}
-{{- else }}
-  {{- toYaml .Values.server.labels | nindent 0 }}
+{{- $section := default "server" .section }}
+{{- $nameSuffix := .nameSuffix }}
+{{- if not (eq $nameSuffix "") }}
+{{- $nameSuffix = .section }}
 {{- end }}
-{{- end }}
+{{- $defaultLabel := (fromYaml (include "varnish-cache.labels" (merge (dict "nameSuffix" $nameSuffix) .))) }}
+{{- $extraLabels := default dict .extraLabels }}
+{{- include "varnish-cache.toYamlField"
+  (merge
+    (dict
+      "section" $section
+      "fieldName" "labels"
+      "extraFieldValues" (merge $extraLabels $defaultLabel))
+    .) }}
 {{- end }}
 
 {{/*
@@ -151,4 +156,113 @@ Sets up the common service account extra labels
   {{- toYaml .Values.serviceAccount.labels | nindent 0 }}
 {{- end }}
 {{- end }}
+{{- end }}
+
+
+{{/*
+Declares the Pod's serviceAccount.
+*/}}
+{{- define "varnish-cache.podServiceAccount" }}
+serviceAccountName: {{ include "varnish-cache.serviceAccountName" . }}
+{{- end }}
+{{/*
+Declares the Pod's securityContext.
+*/}}
+{{- define "varnish-cache.podSecurityContext" }}
+{{- if not (empty .Values.global.podSecurityContext) }}
+securityContext:
+  {{- toYaml .Values.global.podSecurityContext | nindent 2 }}
+{{- end }}
+{{- end }}
+
+{{/*
+Sets up Pod labels
+*/}}
+{{- define "varnish-cache.podLabels" }}
+{{- $section := default "server" .section }}
+{{- $nameSuffix := .nameSuffix }}
+{{- if not (eq $nameSuffix "") }}
+{{- $nameSuffix = .section }}
+{{- end }}
+{{- $defaultLabel := (fromYaml (include "varnish-cache.selectorLabels" (merge (dict "nameSuffix" $nameSuffix) .))) }}
+{{- $extraLabels := default dict .extraLabels }}
+{{- include "varnish-cache.toYamlField"
+  (merge
+    (dict
+      "section" $section
+      "fieldName" "labels"
+      "fieldKey" "podLabels"
+      "extraFieldValues" (merge $extraLabels $defaultLabel))
+    .) }}
+{{- end }}
+
+{{/*
+Declares the Varnish deployment strategy
+*/}}
+{{- define "varnish-cache.strategy" -}}
+{{- if .Values.server.strategy }}
+{{- $tp := kindOf .Values.server.strategy }}
+strategy:
+{{- if eq $tp "string" }}
+  {{- tpl .Values.server.strategy . | trim | nindent 2 }}
+{{- else }}
+  {{- toYaml .Values.server.strategy | nindent 2 }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Declares the Varnish DaemonSet and StatefulSet updateStrategy
+*/}}
+{{- define "varnish-cache.updateStrategy" -}}
+{{- if .Values.server.updateStrategy }}
+{{- $tp := kindOf .Values.server.updateStrategy }}
+updateStrategy:
+{{- if eq $tp "string" }}
+  {{- tpl .Values.server.updateStrategy . | trim | nindent 2 }}
+{{- else }}
+  {{- toYaml .Values.server.updateStrategy | nindent 2 }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Sets up nodeSelector depending on whether a YAML map or a string is given.
+*/}}
+{{- define "varnish-cache.nodeSelector" -}}
+{{- if .Values.server.nodeSelector }}
+nodeSelector:
+  {{- $tp := kindOf .Values.server.nodeSelector }}
+  {{- if eq $tp "string" }}
+    {{- tpl .Values.server.nodeSelector . | trim | nindent 2 }}
+  {{- else }}
+    {{- toYaml .Values.server.nodeSelector | nindent 2 }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Declares the container securityContext.
+*/}}
+{{- define "varnish-cache.securityContext" }}
+{{- include "varnish-cache.toYamlField"
+  (merge
+    (dict
+      "section" .section
+      "subsection" .subsection
+      "fieldName" "securityContext")
+    .) }}
+{{- end }}
+
+{{/*
+Declares the container resource.
+*/}}
+{{- define "varnish-cache.resources" }}
+{{- include "varnish-cache.toYamlField"
+  (merge
+    (dict
+      "section" .section
+      "subsection" .subsection
+      "fieldName" "resources")
+    .) }}
 {{- end }}

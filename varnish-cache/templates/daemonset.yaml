@@ -9,10 +9,8 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: {{ include "varnish-cache.fullname" . }}
-  labels:
-    {{- include "varnish-cache.labels" . | nindent 4 }}
-    {{- include "varnish-cache.serverLabels" . | indent 4 }}
-  {{- include "varnish-cache.serverAnnotations" . | indent 2 }}
+  {{- include "varnish-cache.serverLabels" . | nindent 2 }}
+  {{- include "varnish-cache.serverAnnotations" . | nindent 2 }}
 spec:
   {{- include "varnish-cache.updateStrategy" . | indent 2 }}
   selector:
@@ -20,8 +18,8 @@ spec:
       {{- include "varnish-cache.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- include "varnish-cache.podLabels" . | indent 6 }}
-      {{- include "varnish-cache.podAnnotations" . | indent 6 }}
+      {{- include "varnish-cache.podLabels" . | nindent 6 }}
+      {{- include "varnish-cache.podAnnotations" . | nindent 6 }}
     spec:
       {{- include "varnish-cache.podImagePullSecrets" . | indent 6 }}
       {{- include "varnish-cache.podServiceAccount" . | indent 6 }}
