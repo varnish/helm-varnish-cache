@@ -77,7 +77,78 @@ template=${template:-}
 
     # Note: values.yaml has 'global.securityContext.runAsNonRoot=true' as the default;
     # we're testing that the values are merged and not replaced.
-    [ "${actual}" == '{"hello":"world","runAsNonRoot":true,"runAsUser":1000,"foo":"bar"}' ]
+    [ "${actual}" == '{"foo":"bar","hello":"world","runAsNonRoot":true,"runAsUser":1000}' ]
+}
+
+@test "${kind}: inherits securityContext from global and server with global as a templated string" {
+    cd "$(chart_dir)"
+
+    local securityContext="
+release-name: {{ .Release.Name }}
+release-namespace: {{ .Release.Namespace }}
+"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "global.securityContext=${securityContext}" \
+        --set 'server.securityContext.runAsUser=1000' \
+        --set 'server.securityContext.foo=bar' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .securityContext' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"foo":"bar","release-name":"release-name","release-namespace":"default","runAsUser":1000}' ]
+}
+
+@test "${kind}: inherits securityContext from global and server with server as a templated string" {
+    cd "$(chart_dir)"
+
+    local securityContext="
+release-name: {{ .Release.Name }}
+release-namespace: {{ .Release.Namespace }}
+"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'global.securityContext.hello=world' \
+        --set "server.securityContext=${securityContext}" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .securityContext' | tee -a /dev/stderr)
+
+    # Note: values.yaml has 'global.securityContext.runAsNonRoot=true' as the default;
+    # we're testing that the values are merged and not replaced.
+    [ "${actual}" == '{"hello":"world","release-name":"release-name","release-namespace":"default","runAsNonRoot":true,"runAsUser":999}' ]
+}
+
+@test "${kind}: inherits securityContext from global and server with both as a templated string" {
+    cd "$(chart_dir)"
+
+    local securityContext="
+release-name: {{ .Release.Name }}
+release-namespace: to-be-override
+"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "global.securityContext=${securityContext}" \
+        --set 'server.securityContext=release-namespace: {{ .Release.Namespace }}' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .securityContext' | tee -a /dev/stderr)
+
+    # Note: values.yaml has 'global.securityContext.runAsNonRoot=true' as the default;
+    # we're testing that the values are merged and not replaced.
+    [ "${actual}" == '{"release-name":"release-name","release-namespace":"default"}' ]
 }
 
 @test "${kind}: inherits labels from server" {
@@ -164,32 +235,71 @@ template=${template:-}
     [ "${actual}" == "release-name" ]
 }
 
-@test "${kind}: inherits podLabels from server" {
+@test "${kind}: inherits podLabels from global and server" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    local object=$((helm template \
         --set "server.kind=${kind}" \
+        --set 'global.podLabels.foo=bar' \
         --set 'server.podLabels.hello=varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.metadata.labels.hello' |
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '.spec.template.metadata.labels' |
             tee -a /dev/stderr)
-    [ "${actual}" == "varnish" ]
+
+    [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"varnish-cache","foo":"bar","hello":"varnish"}' ]
 }
 
-@test "${kind}: inherits podLabels from server as templated string" {
+@test "${kind}: inherits podLabels from global and server with global as templated string" {
     cd "$(chart_dir)"
 
-    local actual=$((helm template \
+    local labels="
+release-name: {{ .Release.Name }}
+release-namespace: to-be-override
+"
+
+    local object=$((helm template \
         --set "server.kind=${kind}" \
-        --set 'server.podLabels=hello: {{ .Release.Name }}' \
+        --set "global.podLabels=${labels}" \
+        --set 'server.podLabels.release-namespace=varnish' \
         --namespace default \
         --show-only ${template} \
-        . || echo "---") | tee -a /dev/stderr |
-        yq -r -c '.spec.template.metadata.labels.hello' |
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '.spec.template.metadata.labels' |
             tee -a /dev/stderr)
-    [ "${actual}" == "release-name" ]
+
+    [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"varnish-cache","release-name":"release-name","release-namespace":"varnish"}' ]
+}
+
+@test "${kind}: inherits podLabels from global and server with server as templated string" {
+    cd "$(chart_dir)"
+
+    local labels="
+release-name: {{ .Release.Name }}
+release-namespace: {{ .Release.Namespace }}
+"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'global.podLabels.release-namespace=to-be-override' \
+        --set "server.podLabels=${labels}" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '.spec.template.metadata.labels' |
+            tee -a /dev/stderr)
+
+    [ "${actual}" == '{"app.kubernetes.io/instance":"release-name","app.kubernetes.io/name":"varnish-cache","release-name":"release-name","release-namespace":"default"}' ]
 }
 
 @test "${kind}: inherits default selector labels" {
@@ -537,6 +647,126 @@ template=${template:-}
             tee -a /dev/stderr)
 
     [ "${actual}" == "null" ]
+}
+
+@test "${kind}/extraEnvs: can be configured" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.extraEnvs.FOO=bar' \
+        --set 'server.extraEnvs.BAZ=bax' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "FOO")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"FOO","value":"bar"}' ]
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "BAZ")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"BAZ","value":"bax"}' ]
+}
+
+@test "${kind}/extraEnvs: can be configured as a templated string" {
+    cd "$(chart_dir)"
+
+    local extraEnvs="
+- name: RELEASE_NAME
+  value: {{ .Release.Name }}
+- name: RELEASE_NAMESPACE
+  value: {{ .Release.Namespace }}"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.extraEnvs=${extraEnvs}" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "RELEASE_NAME")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"RELEASE_NAME","value":"release-name"}' ]
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "RELEASE_NAMESPACE")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"RELEASE_NAMESPACE","value":"default"}' ]
+}
+
+
+@test "${kind}/extraEnvs: can be configured as a list" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.extraEnvs[0].name=FOO' \
+        --set 'server.extraEnvs[0].value=bar' \
+        --set 'server.extraEnvs[1].name=BAZ' \
+        --set 'server.extraEnvs[1].value=bax' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "FOO")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"FOO","value":"bar"}' ]
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "BAZ")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"BAZ","value":"bax"}' ]
+}
+
+@test "${kind}/extraEnvs: can be configured as a list of non-value literal" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.extraEnvs[0].name=FROM_CONFIGMAP' \
+        --set 'server.extraEnvs[0].valueFrom.configMapKeyRef.name=my-configmap' \
+        --set 'server.extraEnvs[0].valueFrom.configMapKeyRef.key=my-key' \
+        --set 'server.extraEnvs[1].name=FROM_SECRET' \
+        --set 'server.extraEnvs[1].valueFrom.secretKeyRef.name=my-secret' \
+        --set 'server.extraEnvs[1].valueFrom.secretKeyRef.key=my-key' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "FROM_CONFIGMAP")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"FROM_CONFIGMAP","valueFrom":{"configMapKeyRef":{"key":"my-key","name":"my-configmap"}}}' ]
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .env[]? | select(.name == "FROM_SECRET")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"name":"FROM_SECRET","valueFrom":{"secretKeyRef":{"key":"my-key","name":"my-secret"}}}' ]
 }
 
 @test "${kind}/settings: configured by default" {
@@ -1959,15 +2189,100 @@ vcl.use vcl_main
     [ "${actual}" == "null" ]
 }
 
-@test "${kind}/resources: can be configured" {
+@test "${kind}/resources: inherits resources from global and server" {
     cd "$(chart_dir)"
 
     local actual=$((helm template \
         --set "server.kind=${kind}" \
+        --set 'global.resources.limits.cpu=100m' \
+        --set 'global.resources.requests.cpu=100m' \
         --set 'server.resources.limits.cpu=500m' \
         --set 'server.resources.limits.memory=512Mi' \
-        --set 'server.resources.requests.cpu=100m' \
         --set 'server.resources.requests.memory=128Mi' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .resources' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"100m","memory":"128Mi"}}' ]
+}
+
+@test "${kind}/resources: inherits resources from global and server with global as a templated string" {
+    cd "$(chart_dir)"
+
+    local resources="
+limits:
+  cpu: 500m
+  memory: 512Mi
+requests:
+  memory: 128Mi
+"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'global.resources.limits.cpu=100m' \
+        --set 'global.resources.requests.cpu=100m' \
+        --set "server.resources=${resources}" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .resources' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"100m","memory":"128Mi"}}' ]
+}
+
+@test "${kind}/resources: inherits resources from global and server with server as a templated string" {
+    cd "$(chart_dir)"
+
+    local resources="
+limits:
+  cpu: 100m
+requests:
+  cpu: 100m
+"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "global.resources=${resources}" \
+        --set 'server.resources.limits.cpu=500m' \
+        --set 'server.resources.limits.memory=512Mi' \
+        --set 'server.resources.requests.memory=128Mi' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache") |
+            .resources' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"limits":{"cpu":"500m","memory":"512Mi"},"requests":{"cpu":"100m","memory":"128Mi"}}' ]
+}
+
+@test "${kind}/resources: inherits resources from global and server with both as a templated string" {
+    cd "$(chart_dir)"
+
+    local globalResources="
+limits:
+  cpu: 100m
+requests:
+  cpu: 100m
+"
+
+    local resources="
+limits:
+  cpu: 500m
+  memory: 512Mi
+requests:
+  memory: 128Mi
+"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "global.resources=${globalResources}" \
+        --set "server.resources=${resources}" \
         --namespace default \
         --show-only ${template} \
         . || echo "---") | tee -a /dev/stderr |
@@ -2255,8 +2570,7 @@ podAntiAffinity:
     local actual=$((helm template \
         --set "server.kind=${kind}" \
         --set 'global.securityContext.hello=world' \
-        --set 'server.securityContext.runAsUser=1000' \
-        --set 'server.securityContext.foo=bar' \
+        --set 'server.securityContext.ignore-this=yes' \
         --set 'server.varnishncsa.securityContext.runAsUser=1001' \
         --set 'server.varnishncsa.securityContext.foo=baz' \
         --namespace default \
@@ -2268,7 +2582,87 @@ podAntiAffinity:
 
     # Note: values.yaml has 'global.securityContext.runAsNonRoot=true' as the default;
     # we're testing that the values are merged and not replaced.
-    [ "${actual}" == '{"hello":"world","runAsNonRoot":true,"runAsUser":1001,"foo":"baz"}' ]
+    [ "${actual}" == '{"foo":"baz","hello":"world","runAsNonRoot":true,"runAsUser":1001}' ]
+}
+
+@test "${kind}/varnishncsa: inherits securityContext from global and varnishncsa with global as a templated string" {
+    cd "$(chart_dir)"
+
+    local securityContext="
+release-name: {{ .Release.Name }}
+release-namespace: {{ .Release.Namespace }}
+"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.varnishncsa.enabled=true' \
+        --set 'server.secret=hello-varnish' \
+        --set "global.securityContext=${securityContext}" \
+        --set 'server.securityContext.ignore-this=yes' \
+        --set 'server.varnishncsa.securityContext.runAsUser=1001' \
+        --set 'server.varnishncsa.securityContext.foo=baz' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
+            .securityContext' | tee -a /dev/stderr)
+
+    [ "${actual}" == '{"foo":"baz","release-name":"release-name","release-namespace":"default","runAsUser":1001}' ]
+}
+
+@test "${kind}/varnishncsa: inherits securityContext from global and varnishncsa with varnishncsa as a templated string" {
+    cd "$(chart_dir)"
+
+    local securityContext="
+release-name: {{ .Release.Name }}
+release-namespace: {{ .Release.Namespace }}
+"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.varnishncsa.enabled=true' \
+        --set 'server.secret=hello-varnish' \
+        --set 'global.securityContext.hello=world' \
+        --set 'server.securityContext.ignore-this=yes' \
+        --set "server.varnishncsa.securityContext=${securityContext}" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
+            .securityContext' | tee -a /dev/stderr)
+
+    # Note: values.yaml has 'global.securityContext.runAsNonRoot=true' as the default;
+    # we're testing that the values are merged and not replaced.
+    [ "${actual}" == '{"hello":"world","release-name":"release-name","release-namespace":"default","runAsNonRoot":true,"runAsUser":999}' ]
+}
+
+@test "${kind}/varnishncsa: inherits securityContext from global and varnishncsa with both as a templated string" {
+    cd "$(chart_dir)"
+
+    local securityContext="
+release-name: {{ .Release.Name }}
+release-namespace: to-be-override
+"
+
+    local actual=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.varnishncsa.enabled=true' \
+        --set 'server.secret=hello-varnish' \
+        --set "global.securityContext=${securityContext}" \
+        --set 'server.securityContext.ignore-this=yes' \
+        --set 'server.varnishncsa.securityContext=release-namespace: {{ .Release.Namespace }}' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") | tee -a /dev/stderr |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
+            .securityContext' | tee -a /dev/stderr)
+
+    # Note: values.yaml has 'global.securityContext.runAsNonRoot=true' as the default;
+    # we're testing that the values are merged and not replaced.
+    [ "${actual}" == '{"release-name":"release-name","release-namespace":"default"}' ]
 }
 
 @test "${kind}/varnishncsa/extraArgs: can be configured" {
@@ -2494,6 +2888,51 @@ podAntiAffinity:
             .resources' | tee -a /dev/stderr)
 
     [ "${actual}" == 'null' ]
+}
+
+@test "${kind}/varnishncsa/extraVolumeMounts: can be configured" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set 'server.varnishncsa.extraVolumeMounts[0].name=varnish-data' \
+        --set 'server.varnishncsa.extraVolumeMounts[0].mountPath=/var/data' \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
+            .volumeMounts[]? | select(.name == "varnish-data")' |
+            tee -a /dev/stderr)
+
+    [ "${actual}" == '{"mountPath":"/var/data","name":"varnish-data"}' ]
+}
+
+@test "${kind}/varnishncsa/extraVolumeMounts: can be configured as templated string" {
+    cd "$(chart_dir)"
+
+    local extraVolumeMounts="
+- name: {{ .Release.Name }}-data
+  mountPath: /var/data"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.varnishncsa.extraVolumeMounts=${extraVolumeMounts}" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache-ncsa") |
+            .volumeMounts[]? | select(.name == "release-name-data")' |
+            tee -a /dev/stderr)
+
+    [ "${actual}" == '{"name":"release-name-data","mountPath":"/var/data"}' ]
 }
 
 @test "${kind}/extraManifests: do nothing with templated string without checksum flag" {

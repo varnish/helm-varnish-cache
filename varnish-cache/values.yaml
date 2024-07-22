@@ -20,6 +20,28 @@ global:
     runAsUser: 999
     runAsNonRoot: true
 
+  # Sets the annotations for all workload resources.
+  annotations: {}
+
+  # Sets the annotations for all pod templates.
+  podAnnotations: {}
+
+  # Sets the labels for all workload resources.
+  labels: {}
+
+  # Sets the labels for all pod templates.
+  podLabels: {}
+
+  # Configures a resource limits for all containers.
+  resources: {}
+  #resources:
+  #  limits:
+  #    cpu: 100m
+  #    memory: 128Mi
+  #  requests:
+  #    cpu: 100m
+  #    memory: 128Mi
+
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
@@ -109,6 +131,26 @@ server:
   #    group: "www"
   #    mode: "0700"
   #    proto: "PROXY"
+
+  # Sets the extra environment variables for Varnish Cache. Can be set as either
+  # an object, a list, or a templated string.
+  extraEnvs: {}
+  #extraEnvs:
+  #  MY_ENV_VAR: value
+  #  MY_OTHER_ENV_VAR: other_value
+  #
+  #extraEnvs:
+  #  - name: MY_ENV_VAR
+  #    value: value
+  #  - name: MY_OTHER_ENV_VAR
+  #    valueFrom:
+  #      configMapRef:
+  #        name: my-config-map
+  #        value: my-key
+  #
+  #extraEnvs: |
+  #  - name: RELEASE_NAMESPACE
+  #    value: {{ .Release.Namespace }}
 
   # Sets the default Time To Live (TTL) for cached objects.
   ttl: 120
@@ -545,7 +587,7 @@ server:
       # Sets the consecutive failures until a probe is considered a failure.
       failureThreshold: 3
 
-    # Configures a resource limits.
+    # Configures a resource limits for Varnish NCSA container.
     resources: {}
     #resources:
     #  limits:
