@@ -24,17 +24,22 @@ spec:
     name: {{ include "varnish-cache.fullname" . }}
   minReplicas: {{ .Values.server.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.server.autoscaling.maxReplicas }}
-{{- if not (empty .Values.server.autoscaling.behavior) }}
+  {{- if not (empty .Values.server.autoscaling.behavior) }}
+  {{- $tp := kindOf .Values.server.autoscaling.behavior }}
   behavior:
-  {{- toYaml .Values.server.autoscaling.behavior | nindent 4 }}
-{{- end }}
-{{- if .Values.server.autoscaling.metrics }}
+  {{- if eq $tp "string" }}
+    {{- tpl .Values.server.autoscaling.behavior . | trim | nindent 4 }}
+  {{- else }}
+    {{- toYaml .Values.server.autoscaling.behavior | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  {{- if not (empty .Values.server.autoscaling.metrics) }}
   metrics:
-{{- $tp := kindOf .Values.server.autoscaling.metrics }}
-{{- if eq $tp "string" }}
-  {{- tpl .Values.server.autoscaling.metrics . | trim | nindent 4 }}
-{{- else }}
-  {{- toYaml .Values.server.autoscaling.metrics | nindent 4 }}
-{{- end }}
-{{- end }}
+  {{- $tp := kindOf .Values.server.autoscaling.metrics }}
+  {{- if eq $tp "string" }}
+    {{- tpl .Values.server.autoscaling.metrics . | trim | nindent 4 }}
+  {{- else }}
+    {{- toYaml .Values.server.autoscaling.metrics | nindent 4 }}
+  {{- end }}
+  {{- end }}
 {{- end }}
