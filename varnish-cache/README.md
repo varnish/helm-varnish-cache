@@ -966,6 +966,13 @@ Sets the minimum number of replicas to always keep running.
 
 Sets the maximum number of replicas to run at most.
 
+**server.autoscaling.behavior**
+
+- Type: object or template string
+- Availability: v1.1.0
+
+Sets the [HorizontalPodAutoscaling][k8s-hpa] behavior. The value can be set as either an object or a template string.
+
 **server.autoscaling.metrics**
 
 - Type: object or template string

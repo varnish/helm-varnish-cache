@@ -307,9 +307,10 @@ server:
     # Sets the maximum number of replicas to spawn.
     maxReplicas: 100
 
-    # Configures the behavior.
-    behavior: {}
-    #behavior:
+    # Configures the behavior. Can be set as a template string or a
+    # YAML map.
+    behavior: ""
+    #behavior: |
     #  scaleDown:
     #    stabilizationWindowSeconds: 120
     #    policies:
