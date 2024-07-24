@@ -288,7 +288,33 @@ server:
   #cmdfileConfigFile: "files/cmds.cli"
 
   # Delays stopping of the Varnish Cache container by the given seconds.
-  delayedHaltSeconds: 0
+  # Deprecated: use `server.delayedShutdown` instead
+  #delayedHaltSeconds: 0
+
+  # Configures delayed shutdown for zero-downtime downscaling.
+  delayedShutdown:
+    # Delayed shutdown method. Can be one of:
+    #
+    #     none      Do not perform delayed shutdown
+    #     sleep     Perform sleep in preStop for specific seconds
+    #     mempool   Automatically determine if there is any active clients before shutting down
+    #
+    # Note that when this value is set to anything other than "none"
+    # `server.terminationGracePeriodSeconds` must also be set to the
+    # maximum time it takes for Varnish Cache to shutdown.
+    method: "none"
+
+    # Configures "sleep" delayed shutdown method.
+    sleep:
+      seconds: 90
+
+    # Configures "mempool" delayed shutdown method.
+    mempool:
+      # Poll the mempool session every given pollSeconds.
+      pollSeconds: 1
+
+      # Wait for the given waitSeconds before fully shutting down.
+      waitSeconds: 5
 
   # Sets the image and tag to use to deploy Varnish Cache.
   # If tag is blank, appVersion is used.

@@ -2476,6 +2476,92 @@ podAntiAffinity:
     [ "${actual}" == '{"preStop":{"exec":{"command":["/bin/sleep","120"]}}}' ]
 }
 
+@test "${kind}/delayedHaltSeconds: takes priority over delayedShutdown" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.delayedHaltSeconds=120" \
+        --set "server.delayedShutdown.method=sleep" \
+        --set "server.delayedShutdown.sleep.seconds=90" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" | yq -r -c '.lifecycle' | tee -a /dev/stderr)
+    [ "${actual}" == '{"preStop":{"exec":{"command":["/bin/sleep","120"]}}}' ]
+}
+
+@test "${kind}/delayedShutdown: not enabled by default" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" | yq -r -c '.lifecycle' | tee -a /dev/stderr)
+    [ "${actual}" == "null" ]
+}
+
+@test "${kind}/delayedShutdown: can be enabled with sleep" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.delayedShutdown.method=sleep" \
+        --set "server.delayedShutdown.sleep.seconds=120" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" | yq -r -c '.lifecycle' | tee -a /dev/stderr)
+    [ "${actual}" == '{"preStop":{"exec":{"command":["/bin/sleep","120"]}}}' ]
+}
+
+@test "${kind}/delayedShutdown: can be enabled with mempool" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.delayedShutdown.method=mempool" \
+        --set "server.delayedShutdown.mempool.pollSeconds=5" \
+        --set "server.delayedShutdown.mempool.waitSeconds=30" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" | yq -r -c '.lifecycle' | tee -a /dev/stderr)
+    [[ "${actual}" == *"MEMPOOL.sess"* ]]
+    [[ "${actual}" == *"sleep 5"* ]]
+    [[ "${actual}" == *"sleep 30"* ]]
+}
+
 @test "${kind}/terminationGracePeriodSeconds: not enabled by default" {
     cd "$(chart_dir)"
 
@@ -2511,7 +2597,7 @@ podAntiAffinity:
     [ "${actual}" == "120" ]
 }
 
-@test "${kind}/terminationGracePeriodSeconds: can be enabled with delayed halt seconds" {
+@test "${kind}/terminationGracePeriodSeconds: can be enabled with delayedHaltSeconds" {
     cd "$(chart_dir)"
 
     local object=$((helm template \
@@ -2536,6 +2622,47 @@ podAntiAffinity:
         --set "server.kind=${kind}" \
         --set "server.terminationGracePeriodSeconds=180" \
         --set "server.delayedHaltSeconds=60" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.terminationGracePeriodSeconds' |
+            tee -a /dev/stderr)
+    [ "${actual}" == "180" ]
+}
+
+@test "${kind}/terminationGracePeriodSeconds: do nothing with delayedShutdown sleep seconds" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.terminationGracePeriodSeconds=180" \
+        --set "server.delayedShutdown.method=sleep" \
+        --set "server.delayedShutdown.sleep.seconds=60" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.terminationGracePeriodSeconds' |
+            tee -a /dev/stderr)
+    [ "${actual}" == "180" ]
+}
+
+@test "${kind}/terminationGracePeriodSeconds: do nothing with delayedShutdown mempool seconds" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.terminationGracePeriodSeconds=180" \
+        --set "server.delayedShutdown.method=mempool" \
+        --set "server.delayedShutdown.mempool.pollSeconds=1" \
+        --set "server.delayedShutdown.mempool.waitSeconds=5" \
         --namespace default \
         --show-only ${template} \
         . || echo "---") |
