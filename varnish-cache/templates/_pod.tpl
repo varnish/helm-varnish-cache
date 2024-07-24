@@ -341,21 +341,31 @@ Declares the Varnish Cache container
     {{- toYaml .Values.server.extraVolumeMounts | nindent 4 }}
     {{- end }}
     {{- end }}
+  {{- if or .Values.server.delayedHaltSeconds (eq .Values.server.delayedShutdown.method "sleep") }}
+  {{ $haltSeconds := 0 }}
   {{- if .Values.server.delayedHaltSeconds }}
+  {{ $haltSeconds = .Values.server.delayedHaltSeconds }}
+  {{- else }}
+  {{ $haltSeconds = .Values.server.delayedShutdown.sleep.seconds }}
+  {{- end }}
   lifecycle:
     preStop:
       exec:
-        command: ["/bin/sleep", {{ .Values.server.delayedHaltSeconds | quote }}]
-  {{- else if or (gt (int .Values.server.replicas) 1) .Values.server.autoscaling.enabled }}
+        command: ["/bin/sleep", {{ $haltSeconds | quote }}]
+  {{- else if eq .Values.server.delayedShutdown.method "mempool" }}
   lifecycle:
     preStop:
       exec:
         command:
         - /bin/sh
         - -c
-        - >
-          while [ `varnishstat -1 | awk '/MEMPOOL.sess[0-9]+.live/ {a+=$2} END {print a}'` -ne 0 ]; do sleep 1; done;
-          sleep 5
+        - |
+          set -e
+          while [ "$(varnishstat -1 | awk '/MEMPOOL.sess[0-9]+.live/ { a+=$2 } END { print a }')" -ne 0 ]; do
+            echo >&2 "Waiting for Varnish to drain connections..."
+            sleep {{ .Values.server.delayedShutdown.mempool.pollSeconds }}
+            done
+          sleep {{ .Values.server.delayedShutdown.mempool.waitSeconds }}
   {{- end }}
 {{- end }}
 
