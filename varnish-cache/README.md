@@ -939,6 +939,54 @@ An object that conforms to the Kubernetes [tolerations][k8s-pod-v1-pods] definit
 
 This configuration is used to fine-grain control the scheduling of the Pod. By default, this is set to ensure all Varnish Cache Pods are always run in a different node. To disable this behavior, set to empty string (""). The value can be set as either an object or a template string.
 
+**server.delayedShutdown.method**
+
+- Type: string, one of `none`, `sleep`, or `mempool`
+- Availability: v1.1.0
+
+Sets the method for Kubernetes to delay sending a SIGHUP to Varnish Cache. This is useful for rolling updates or when scaling down, where the load balancer component may still attempt to forward requests to Varnish Cache instance when Varnish Cache has already received a SIGHUP, leading to HTTP 502 errors.
+
+Multiple methods are provided here:
+
+- `sleep` will simply sleep in the `preStop` for `server.delayedShutdown.sleep.seconds` seconds. This is the simplest way to delay the shutdown of Varnish Cache when the time taken for the load balancer component to stop forwarding traffic to Varnish Cache is largely fixed.
+- `mempool` polls varnishstat for `MEMPOOL.sess` to go down to zero. This allows for the quickest shutdown but requires tuning `server.delayedShutdown.mempool.pollSeconds` to traffic patterns (as `MEMPOOL.sess` may become 0 momentary).
+
+When `server.delayedShutdown.method` is set to a value other than "none", `server.terminationGracePeriodSeconds` **must** also be set.
+
+**server.delayedShutdown.sleep.seconds**
+
+- Type: number
+- Default: `90`
+- Availability: v1.1.0
+
+Sets the number of seconds to sleep before SIGHUP is sent to Varnish Cache. Only applicable when `server.delayedShutdown.method` is set to "sleep".
+
+**server.delayedShutdown.mempool.pollSeconds**
+
+- Type: number
+- Default: `1`
+- Availability: v1.1.0
+
+Sets the number of seconds to poll for `MEMPOOL.sess` stats. Only applicable when `server.delayedShutdown.method` is set to "mempool".
+
+This value requires tuning to traffic patterns. If the time between each traffic took more than `server.delayedShutdown.mempool.pollSeconds`, then Varnish Cache could be signaled to SIGHUP too early, leading to an HTTP 502 error on the load balancer (as Varnish Cache already stopped accepting connection).
+
+**server.delayedShutdown.mempool.waitSeconds**
+
+- Type: number
+- Default: `5`
+- Availability: v1.1.0
+
+Sets the number of seconds to wait after `MEMPOOL.sess` turned zero. Only applicable when `server.delayedShutdown.method` is set to "mempool".
+
+**server.terminationGracePeriodSeconds**
+
+- Type: number
+
+Sets the termination grace period seconds for Varnish Cache to shut down until Kubernetes sends the process a SIGKILL. When `server.delayedShutdown` is used, this value should be set to the **maximum** time it took for Varnish Cache to fully shutdown.
+
+The value to set here depends on the cluster setup. For example, an AWS Load Balancer may still forward requests to Varnish for `deregistration_delay.timeout_seconds` which is set to 300 seconds by default. If `server.delayedShutdown` took 30 seconds, then `server.terminationGracePeriodSeconds` should be set to _at least_ 330 seconds in order to have a zero-downtime during a rolling update or scaling down.
+
 **server.autoscaling**
 
 - Type: object
