@@ -1299,6 +1299,53 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" == '' ]
 }
 
+@test "${kind}/vcl: use the bundled vcl by default" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '.spec.template.metadata.annotations."checksum/release-name-vcl"' |
+            tee -a /dev/stderr)
+    [ "${actual}" = 'null' ]
+
+    local actual=$(echo "$object" |
+        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '' ]
+
+    local actual=$(echo "$object" |
+        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '' ]
+
+    local container=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -r -c '
+            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.volumeMounts[] | select(.name == "release-name-config")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '' ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '' ]
+}
+
 @test "${kind}/vcl: can be configured" {
     cd "$(chart_dir)"
 
@@ -1332,6 +1379,11 @@ backend release-name {
     [ "${actual}" = 'e71c17a8bb11a3944b9029906deac70c7f3643ceec87cb1e8a304b7b8c92138d' ]
 
     local actual=$(echo "$object" |
+        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '{"name":"release-name-config","emptyDir":{"medium":"Memory"}}' ]
+
+    local actual=$(echo "$object" |
         yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-varnish-cache-vcl"}}' ]
@@ -1345,12 +1397,17 @@ backend release-name {
         yq -r -c '
             .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
-    [ "${actual}" == '["-f","/etc/varnish/default.vcl"]' ]
+    [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.volumeMounts[] | select(.name == "release-name-config")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '{"name":"release-name-config","mountPath":"/etc/varnish"}' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
+    [ "${actual}" = '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
 }
 
 @test "${kind}/vcl: can be configured via vclConfigs" {
@@ -1387,6 +1444,11 @@ backend release-name {
     [ "${actual}" = 'e71c17a8bb11a3944b9029906deac70c7f3643ceec87cb1e8a304b7b8c92138d' ]
 
     local actual=$(echo "$object" |
+        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '{"name":"release-name-config","emptyDir":{"medium":"Memory"}}' ]
+
+    local actual=$(echo "$object" |
         yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-varnish-cache-vcl"}}' ]
@@ -1400,12 +1462,17 @@ backend release-name {
         yq -r -c '
             .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
-    [ "${actual}" == '["-f","/etc/varnish/default.vcl"]' ]
+    [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.volumeMounts[] | select(.name == "release-name-config")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '{"name":"release-name-config","mountPath":"/etc/varnish"}' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
+    [ "${actual}" = '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
 }
 
 @test "${kind}/vcl: can be configured via vclConfigs with extra vcls" {
@@ -1463,6 +1530,11 @@ backend release-name {
     [ "${actual}" = '11060980fc16de8bee3d626bfa600a13ab5db83471fd93fe60e15437f2d568b5' ]
 
     local actual=$(echo "$object" |
+        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '{"name":"release-name-config","emptyDir":{"medium":"Memory"}}' ]
+
+    local actual=$(echo "$object" |
         yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-varnish-cache-vcl"}}' ]
@@ -1481,17 +1553,27 @@ backend release-name {
         yq -r -c '
             .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
-    [ "${actual}" == '["-f","/etc/varnish/default.vcl"]' ]
+    [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
+
+    local actual=$(echo "$object" |
+        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '{"name":"release-name-config","emptyDir":{"medium":"Memory"}}' ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.volumeMounts[] | select(.name == "release-name-config")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '{"name":"release-name-config","mountPath":"/etc/varnish"}' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
+    [ "${actual}" = '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl-main-vcl")' |
             tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl-main-vcl","mountPath":"/etc/varnish/main.vcl","subPath":"main.vcl"}' ]
+    [ "${actual}" = '{"name":"release-name-config-vcl-main-vcl","mountPath":"/etc/varnish/main.vcl","subPath":"main.vcl"}' ]
 }
 
 @test "${kind}/vcl: can be configured via vclConfigs with extra vcls with default.vcl" {
@@ -1550,6 +1632,11 @@ backend release-name {
     [ "${actual}" = '11060980fc16de8bee3d626bfa600a13ab5db83471fd93fe60e15437f2d568b5' ]
 
     local actual=$(echo "$object" |
+        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '{"name":"release-name-config","emptyDir":{"medium":"Memory"}}' ]
+
+    local actual=$(echo "$object" |
         yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-varnish-cache-vcl"}}' ]
@@ -1568,17 +1655,22 @@ backend release-name {
         yq -r -c '
             .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
-    [ "${actual}" == '["-f","/etc/varnish/default.vcl"]' ]
+    [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.volumeMounts[] | select(.name == "release-name-config")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '{"name":"release-name-config","mountPath":"/etc/varnish"}' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
+    [ "${actual}" = '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/default.vcl","subPath":"default.vcl"}' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl-main-vcl")' |
             tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl-main-vcl","mountPath":"/etc/varnish/main.vcl","subPath":"main.vcl"}' ]
+    [ "${actual}" = '{"name":"release-name-config-vcl-main-vcl","mountPath":"/etc/varnish/main.vcl","subPath":"main.vcl"}' ]
 }
 
 @test "${kind}/vcl: can be configured via vclConfigs with extra vcls with alternative names" {
@@ -1638,6 +1730,11 @@ backend release-name {
     [ "${actual}" = '11060980fc16de8bee3d626bfa600a13ab5db83471fd93fe60e15437f2d568b5' ]
 
     local actual=$(echo "$object" |
+        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '{"name":"release-name-config","emptyDir":{"medium":"Memory"}}' ]
+
+    local actual=$(echo "$object" |
         yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-varnish-cache-vcl"}}' ]
@@ -1656,17 +1753,22 @@ backend release-name {
         yq -r -c '
             .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
-    [ "${actual}" == '["-f","/etc/varnish/varnish.vcl"]' ]
+    [ "${actual}" = '["-f","/etc/varnish/varnish.vcl"]' ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.volumeMounts[] | select(.name == "release-name-config")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '{"name":"release-name-config","mountPath":"/etc/varnish"}' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/varnish.vcl","subPath":"varnish.vcl"}' ]
+    [ "${actual}" = '{"name":"release-name-config-vcl","mountPath":"/etc/varnish/varnish.vcl","subPath":"varnish.vcl"}' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl-main-vcl")' |
             tee -a /dev/stderr)
-    [ "${actual}" == '{"name":"release-name-config-vcl-main-vcl","mountPath":"/etc/varnish/main.vcl","subPath":"main.vcl"}' ]
+    [ "${actual}" = '{"name":"release-name-config-vcl-main-vcl","mountPath":"/etc/varnish/main.vcl","subPath":"main.vcl"}' ]
 }
 
 @test "${kind}/vcl: cannot be configured with both vclConfig and vclConfigs using default.vcl" {
@@ -1760,6 +1862,11 @@ backend default {
             .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-f","/etc/varnish/varnish.vcl"]' ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.volumeMounts[] | select(.name == "release-name-config")' |
+            tee -a /dev/stderr)
+    [ "${actual}" = '{"name":"release-name-config","mountPath":"/etc/varnish"}' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
