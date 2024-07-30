@@ -63,7 +63,7 @@ if [ $# -lt 1 ]; then
 fi
 
 REPO=$1; shift
-FILTER=${1:-"[0-9]+\."}
+FILTER=${1:-"[0-9]+\.[0-9\.]+$"}
 
 skopeo list-tags "$REPO" |
     jq -r '.Tags[]' |
