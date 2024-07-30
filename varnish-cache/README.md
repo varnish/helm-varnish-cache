@@ -34,7 +34,16 @@ Varnish Cache Helm Chart is designed to be highly configurable while requiring m
 
 #### Changing the default VCL
 
-By default, Varnish Cache Helm Chart provides an empty VCL with a default backend configured to `locahost:8080`. In most cases, this needs to be changed to something more useful. To do so with the values override, configure `server.vclConfig` as needed:
+Varnish Cache Helm Chart does not provide any VCL by default. Instead, it uses the default VCL located at `/etc/varnish/default.vcl` provided within the Docker image. From varnish:7.5.0 onward, it is possible to configure the default backend via an environment variable:
+
+```yaml
+server:
+  extraEnvs:
+    VARNISH_BACKEND_HOST: "localhost"
+    VARNISH_BACKEND_PORT: "8080"
+```
+
+If a more advanced customization is required, it is also possible to override the default VCL with `server.vclConfig`:
 
 ```yaml
 ---

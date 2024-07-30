@@ -244,13 +244,7 @@ server:
   vclConfigPath: "/etc/varnish/default.vcl"
 
   # Configures the default VCL. Can be set as a templated string.
-  vclConfig: |
-    vcl 4.1;
-
-    backend default {
-      .host = "127.0.0.1";
-      .port = "8080";
-    }
+  vclConfig: ""
 
   # Use the content of the given file path as VCL configuration. The file will be
   # parsed as templated string. Will override "server.vclConfig" if set. Note that
