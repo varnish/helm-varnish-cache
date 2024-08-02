@@ -1315,11 +1315,6 @@ release-namespace: {{ .Release.Namespace }}
     [ "${actual}" = 'null' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '' ]
-
-    local actual=$(echo "$object" |
         yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '' ]
@@ -1334,11 +1329,6 @@ release-namespace: {{ .Release.Namespace }}
             .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
-
-    local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
@@ -1379,11 +1369,6 @@ backend release-name {
     [ "${actual}" = 'e71c17a8bb11a3944b9029906deac70c7f3643ceec87cb1e8a304b7b8c92138d' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config","emptyDir":{"medium":"Memory"}}' ]
-
-    local actual=$(echo "$object" |
         yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-varnish-cache-vcl"}}' ]
@@ -1398,11 +1383,6 @@ backend release-name {
             .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
-
-    local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config","mountPath":"/etc/varnish"}' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
@@ -1444,11 +1424,6 @@ backend release-name {
     [ "${actual}" = 'e71c17a8bb11a3944b9029906deac70c7f3643ceec87cb1e8a304b7b8c92138d' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config","emptyDir":{"medium":"Memory"}}' ]
-
-    local actual=$(echo "$object" |
         yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-varnish-cache-vcl"}}' ]
@@ -1463,11 +1438,6 @@ backend release-name {
             .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
-
-    local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config","mountPath":"/etc/varnish"}' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
@@ -1530,11 +1500,6 @@ backend release-name {
     [ "${actual}" = '11060980fc16de8bee3d626bfa600a13ab5db83471fd93fe60e15437f2d568b5' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config","emptyDir":{"medium":"Memory"}}' ]
-
-    local actual=$(echo "$object" |
         yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-varnish-cache-vcl"}}' ]
@@ -1554,16 +1519,6 @@ backend release-name {
             .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
-
-    local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config","emptyDir":{"medium":"Memory"}}' ]
-
-    local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config","mountPath":"/etc/varnish"}' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
@@ -1632,11 +1587,6 @@ backend release-name {
     [ "${actual}" = '11060980fc16de8bee3d626bfa600a13ab5db83471fd93fe60e15437f2d568b5' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config","emptyDir":{"medium":"Memory"}}' ]
-
-    local actual=$(echo "$object" |
         yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-varnish-cache-vcl"}}' ]
@@ -1656,11 +1606,6 @@ backend release-name {
             .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/default.vcl"]' ]
-
-    local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config","mountPath":"/etc/varnish"}' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
@@ -1730,11 +1675,6 @@ backend release-name {
     [ "${actual}" = '11060980fc16de8bee3d626bfa600a13ab5db83471fd93fe60e15437f2d568b5' ]
 
     local actual=$(echo "$object" |
-        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config","emptyDir":{"medium":"Memory"}}' ]
-
-    local actual=$(echo "$object" |
         yq -r -c '.spec.template.spec.volumes[]? | select(.name == "release-name-config-vcl")' |
             tee -a /dev/stderr)
     [ "${actual}" = '{"name":"release-name-config-vcl","configMap":{"name":"release-name-varnish-cache-vcl"}}' ]
@@ -1754,11 +1694,6 @@ backend release-name {
             .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" = '["-f","/etc/varnish/varnish.vcl"]' ]
-
-    local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config","mountPath":"/etc/varnish"}' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
@@ -1862,11 +1797,6 @@ backend default {
             .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
             tee -a /dev/stderr)
     [ "${actual}" == '["-f","/etc/varnish/varnish.vcl"]' ]
-
-    local actual=$(echo "$container" |
-        yq -r -c '.volumeMounts[] | select(.name == "release-name-config")' |
-            tee -a /dev/stderr)
-    [ "${actual}" = '{"name":"release-name-config","mountPath":"/etc/varnish"}' ]
 
     local actual=$(echo "$container" |
         yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
