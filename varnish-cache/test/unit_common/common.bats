@@ -1886,6 +1886,44 @@ backend default {
     [ "${actual}" == '{"varnish.vcl":"\nvcl 4.1;\n\nbackend default {\n  .host = \"127.0.0.1\";\n  .port = \"8080\";\n}\n"}' ]
 }
 
+@test "${kind}/vcl: can be relocated with extraVolumeMounts" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.vclConfigPath=/etc/varnish/varnish.vcl" \
+        --set "server.extraVolumes[0].name=varnish-vcl-tenant1" \
+        --set "server.extraVolumes[0].configMap.name=varnish-vcl-tenant1" \
+        --set "server.extraVolumeMounts[0].name=varnish-vcl-tenant1" \
+        --set "server.extraVolumeMounts[0].mountPath=/etc/varnish/tenant1.vcl" \
+        --set "server.extraVolumeMounts[0].subpath=tenant1.vcl" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local actual=$(echo "$object" |
+        yq -r -c '.spec.template.spec.volumes[]? | select(.name == "varnish-vcl-tenant1")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"configMap":{"name":"varnish-vcl-tenant1"},"name":"varnish-vcl-tenant1"}' ]
+
+    local container=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -r -c '
+            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '["-f","/etc/varnish/varnish.vcl"]' ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.volumeMounts[] | select(.name == "varnish-vcl-tenant1")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '{"mountPath":"/etc/varnish/tenant1.vcl","name":"varnish-vcl-tenant1","subpath":"tenant1.vcl"}' ]
+}
+
 @test "${kind}/cmdfile: can be configured" {
     cd "$(chart_dir)"
 
