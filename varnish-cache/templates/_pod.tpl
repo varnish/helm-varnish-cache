@@ -105,11 +105,6 @@ Declares the Pod's volume mounts.
 {{- define "varnish-cache.podVolumes" }}
 {{- $defaultVcl := osBase .Values.server.vclConfigPath }}
 volumes:
-{{- if or (not (empty .Values.server.vclConfig)) (not (empty .Values.server.vclConfigs)) }}
-- name: {{ .Release.Name }}-config
-  emptyDir:
-    medium: "Memory"
-{{- end }}
 {{- if and (not (empty .Values.server.secretFrom)) (not (eq .Values.server.secret "")) }}
 {{- fail "Either 'server.secret' or 'server.secretFrom' can be set." }}
 {{- else if and (not (empty .Values.server.secretFrom)) }}
@@ -307,10 +302,6 @@ Declares the Varnish Cache container
           fieldPath: status.podIP
     {{- include "varnish-cache.toEnv" (merge (dict "envs" .Values.server.extraEnvs) .) | nindent 4 }}
   volumeMounts:
-    {{- if or (not (empty .Values.server.vclConfig)) (not (empty .Values.server.vclConfigs)) }}
-    - name: {{ .Release.Name }}-config
-      mountPath: /etc/varnish
-    {{- end }}
     {{- if and (not (empty .Values.server.secretFrom)) (hasKey .Values.server.secretFrom "name") (hasKey .Values.server.secretFrom "key") }}
     - name: {{ .Release.Name }}-config-secret
       mountPath: /etc/varnish/secret
