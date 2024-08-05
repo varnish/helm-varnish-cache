@@ -259,13 +259,8 @@ Declares the Varnish Cache container
     - -a
     - http=$(VARNISH_HTTP_ADDRESS):{{ .Values.server.http.port }},HTTP
     {{- end }}
-    {{- if or (not (eq (include "varnish-cache.vclConfig" .) "")) (not (empty .Values.server.extraVolumeMounts)) }}
     - -f
     - {{ .Values.server.vclConfigPath }}
-    {{- else }}
-    - -f
-    - /etc/varnish/default.vcl
-    {{- end }}
     {{- if .Values.server.admin.port }}
     - -T
     - {{ .Values.server.admin.address }}:{{ .Values.server.admin.port }}

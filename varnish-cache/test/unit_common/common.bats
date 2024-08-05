@@ -1816,6 +1816,34 @@ backend default {
     [ "${actual}" == '{"varnish.vcl":"\nvcl 4.1;\n\nbackend default {\n  .host = \"127.0.0.1\";\n  .port = \"8080\";\n}\n"}' ]
 }
 
+@test "${kind}/vcl: can be relocated without vclConfig" {
+    cd "$(chart_dir)"
+
+    local object=$((helm template \
+        --set "server.kind=${kind}" \
+        --set "server.vclConfigPath=/etc/varnish/varnish.vcl" \
+        --namespace default \
+        --show-only ${template} \
+        . || echo "---") |
+        tee -a /dev/stderr)
+
+    local container=$(echo "$object" |
+        yq -r -c '
+            .spec.template.spec.containers[]? | select(.name == "varnish-cache")' |
+            tee -a /dev/stderr)
+
+    local actual=$(echo "$container" |
+        yq -r -c '
+            .command | . as $cmd | index("-f") as $i | $cmd[$i:$i+2]' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '["-f","/etc/varnish/varnish.vcl"]' ]
+
+    local actual=$(echo "$container" |
+        yq -r -c '.volumeMounts[] | select(.name == "release-name-config-vcl")' |
+            tee -a /dev/stderr)
+    [ "${actual}" == '' ]
+}
+
 @test "${kind}/vcl: can be relocated with extraVolumeMounts" {
     cd "$(chart_dir)"
 
