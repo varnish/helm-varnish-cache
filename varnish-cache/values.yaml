@@ -239,6 +239,10 @@ server:
   secretFile: ""
   #secretFile: "files/secret"
 
+  # Sets the command to execute.
+  command: []
+  #command: ["/entrypoint.sh","-d"]
+
   # Configures the path to the default VCL configuration file. This configuration
   # option also affects the location where `vclConfig` is mounted (if present).
   vclConfigPath: "/etc/varnish/default.vcl"
