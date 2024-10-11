@@ -254,7 +254,7 @@ Declares the Varnish Cache container
   {{- include "varnish-cache.resources" (merge (dict "section" "server") .) | nindent 2 }}
   command:
     {{- if .Values.server.command }}
-    command: {{- toYaml .Values.server.command | nindent 6 }}
+    {{- toYaml .Values.server.command | nindent 4 }}
     {{- else }}
     - /usr/sbin/varnishd
     - -F
