@@ -253,6 +253,9 @@ Declares the Varnish Cache container
   {{- include "varnish-cache.varnishPodProbe" (merge (dict "probeName" "readinessProbe") .) | nindent 2 }}
   {{- include "varnish-cache.resources" (merge (dict "section" "server") .) | nindent 2 }}
   command:
+    {{- if .Values.server.command }}
+    {{- toYaml .Values.server.command | nindent 4 }}
+    {{- else }}
     - /usr/sbin/varnishd
     - -F
     {{- if .Values.server.http.enabled }}
@@ -288,6 +291,7 @@ Declares the Varnish Cache container
     {{- if (not (empty $varnishExtraArgs)) }}
     {{- range $v := $varnishExtraArgs }}
     - {{ $v | quote }}
+    {{- end }}
     {{- end }}
     {{- end }}
   env:
