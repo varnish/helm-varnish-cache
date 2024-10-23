@@ -8,7 +8,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: varnish
+      app.kubernetes.io/name: {{ include "varnish-cache.name" . }}
   policyTypes:
     - Ingress
     - Egress
